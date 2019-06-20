@@ -1,0 +1,95 @@
+﻿gitlab服务器的搭建：
+在CentOS系统上安装所需的依赖：ssh，防火墙,postfix(用于邮件通知) ，wget，以下这些命令也会打开系统防火墙中的HTTP和SSH端口访问。
+
+1.安装ssh
+sudo yum install -y curl policycoreutils-python openssh-server
+
+2.将SSH服务设置成开机自启动，安装命令：sudo systemctl enable sshd  
+
+3.启动SSH服务，安装命令：sudo systemctl start sshd
+
+6.添加http服务到firewalld,pemmanent表示永久生效，若不加--permanent系统下次启动后就会失效。
+
+sudo firewall-cmd --permanent --add-service=http
+7.重启防火墙，安装命令：sudo systemctl reload firewalld
+8.接下来，安装Postfix以发送通知邮件，安装命令：sudo yum install postfix
+在安装Postfix期间，可能会出现配置屏幕。选择“Internet Site”并按enter键。使用您的服务器的外部DNS以“mail name”并按enter。如果出现额外的屏幕，继续按enter键接受默认值。
+9.将postfix服务设置成开机自启动，安装命令：sudo systemctl enable postfix
+
+10.启动postfix，安装命令：sudo systemctl start postfix
+报错：Requires: libmysqlclient.so.18(libmysqlclient_18)(64bit)，
+缺少Percona-XtraDB-Cluster-shared-55-5.5.37-25.10.756.el6.x86_64.rpm这个包
+wget http://www.percona.com/redir/downloads/Percona-XtraDB-Cluster/5.5.37-25.10/RPM/rhel6/x86_64/Percona-XtraDB-Cluster-shared-55-5.5.37-25.10.756.el6.x86_64.rpm
+rpm -ivh Percona-XtraDB-Cluster-shared-55-5.5.37-25.10.756.el6.x86_64.rpm 
+
+11.wget 用于从外网上下载插件
+
+检查系统中是否已经安装wget，使用命令若出现下图wget相关版本描述则说明系统中已经安装wget 若报系统找不到命令说明wget未安装
+
+若wget未安装则进行安装，安装命令：yum -y install wget
+12.安装vim编辑器  安装命令：yum install vim -y
+
+二、添加GitLab镜像源并安装gitlab服务器
+1.添加gitlab镜像
+
+wget https://mirrors.tuna.tsinghua.edu.cn/gitlab-ce/yum/el7/gitlab-ce-10.0.0-ce.0.el7.x86_64.rpm
+
+2.安装gitlab 安装命令：rpm -i gitlab-ce-10.0.0-ce.0.el7.x86_64.rpm
+
+安装过程需要些时间，如果出现下图，则说明安装成功。
+
+4.修改gitlab配置文件指定服务器ip和自定义端口：
+vim  /etc/gitlab/gitlab.rb
+external_url 'http://localhost'  ----->修改为：external 'http://server ip:端口'
+ps:注意这里设置的端口不能被占用，默认是8080端口，如果8080已经使用，请自定义其它端口，并在防火墙设置开放相对应得端口
+
+5.重置并启动GitLab
+执行：
+gitlab-ctl reconfigure
+gitlab-ctl restart
+提示  "ok: run:"表示启动成功
+
+6.访问 GitLab页面
+
+如果没有域名，直接输入服务器ip和指定端口进行访问
+
+初始账户: root 密码:5iveL!fe
+
+第一次登录修改密码
+
+
+
+安装过程遇见的那些坑
+一、在CentOS里面安装软件,提示软件已安装，但是rpm -q和-e都是提示包没有安装
+
+ 
+
+   查看与rpm包相关的文件和其他信息   rpm -qa | grep 包名
+
+
+
+查询包是否被安装，命令：rpm -q 包名
+
+
+
+删除软件包，命令：rpm -e 包名
+
+
+ 
+
+运行以上三步，把原来的包删除掉重新下载和安装
+
+
+
+
+注意：
+安装GitLab出现ruby_block[supervise_redis_sleep] action run
+在卸载gitlab然后再次安装执行sudo gitlab-ctl reconfigure的时候往往会出现：ruby_block[supervise_redis_sleep] action run，会一直卡无法往下进行！
+
+解决方案：
+
+1、按住CTRL+C强制结束；
+
+2、运行：sudo systemctl restart gitlab-runsvdir；
+
+3、再次执行：sudo gitlab-ctl reconfigure
